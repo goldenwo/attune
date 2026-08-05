@@ -1,0 +1,2 @@
+# Keep shell scripts LF so their shebang lines work on every platform.
+*.sh text eol=lf
