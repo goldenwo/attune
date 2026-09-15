@@ -14,5 +14,7 @@
     "readability",
     "audience",
     "accessibility"
-  ]
+  ],
+  "hooks": "./codex/hooks.json",
+  "skills": "./skills/"
 }

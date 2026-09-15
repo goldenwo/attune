@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${PLUGIN_ROOT}/codex/run-hook.sh attune-load-level.sh",
+            "commandWindows": "powershell -NoProfile -ExecutionPolicy Bypass -File \"${PLUGIN_ROOT}/codex/run-hook.ps1\" attune-load-level.sh",
+            "timeout": 15,
+            "statusMessage": "attune: attune-load-level"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${PLUGIN_ROOT}/codex/run-hook.sh attune-reinject-level.sh",
+            "commandWindows": "powershell -NoProfile -ExecutionPolicy Bypass -File \"${PLUGIN_ROOT}/codex/run-hook.ps1\" attune-reinject-level.sh",
+            "timeout": 10,
+            "statusMessage": "attune: attune-reinject-level"
+          }
+        ]
+      }
+    ]
+  }
+}

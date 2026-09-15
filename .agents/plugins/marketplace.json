@@ -1,0 +1,12 @@
+{
+  "name": "attune",
+  "plugins": [
+    {
+      "name": "attune",
+      "source": {
+        "source": "local",
+        "path": "."
+      }
+    }
+  ]
+}

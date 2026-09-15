@@ -13,6 +13,21 @@ jobs:
         run: |
           jq empty .claude-plugin/plugin.json
           jq empty .claude-plugin/marketplace.json
+          jq empty .codex-plugin/plugin.json
           jq empty hooks/hooks.json
-      - name: Run hook test
-        run: bash tests/test-load-level.sh
+          jq empty codex/hooks.json
+      - name: Every registered hook exists and parses
+        run: |
+          for f in $(jq -r '.hooks[][].hooks[].command' hooks/hooks.json | sed 's|.*/hooks/||'); do
+            test -f "hooks/$f" || { echo "missing hooks/$f"; exit 1; }
+            bash -n "hooks/$f" || exit 1
+          done
+      - name: Claude and Codex manifests agree on version
+        run: |
+          a=$(jq -r .version .claude-plugin/plugin.json)
+          b=$(jq -r .version .codex-plugin/plugin.json)
+          test "$a" = "$b" || { echo "version drift: claude=$a codex=$b"; exit 1; }
+      - name: Run hook tests
+        run: |
+          bash tests/test-load-level.sh
+          bash tests/test-reinject-level.sh
