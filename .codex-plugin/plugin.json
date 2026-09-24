@@ -1,6 +1,6 @@
 {
   "name": "attune",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Tunes every explanation to how the person likes it. Asks one quick question once (how they want things explained), remembers the answer, matches it in every reply, and keeps restating it so it holds in a long session — with simpler, more detail, or less narration available anytime.",
   "author": {
     "name": "goldenwo"
