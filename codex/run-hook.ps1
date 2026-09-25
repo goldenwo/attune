@@ -18,6 +18,8 @@
 #
 # Codex runs this through its session shell (powershell.exe -NoProfile -Command "<cmd>",
 # measured) or cmd.exe /C; both hand stdin/stdout/stderr through to this process unchanged.
+# The session shell does NOT hand back exit 2, so a block leaves here as a JSON decision with
+# exit 0 (see the end of this file).
 #
 # macOS/Linux never use this - there the hooks.json `command` runs `bash` directly.
 param([Parameter(Mandatory = $true)][string]$Hook)
@@ -90,12 +92,41 @@ $p.WaitForExit()
 $outCopy.Wait()
 $errCopy.Wait()
 
-$bytes = $out.ToArray()
+$code = $p.ExitCode
+$outBytes = $out.ToArray()
+$errBytes = $err.ToArray()
+
+# Exit 2 means "block", but Codex runs this launcher through its session shell
+# (powershell.exe -NoProfile -Command "<commandWindows>"), which reports any failing native
+# command as exit 1 - and Codex treats exit 1 as a hook error and goes ahead. Measured
+# 2026-09-24: secret-scan exited 2 on a planted key and codex 0.155.1 applied the patch anyway.
+# For the events that can block, hand Codex the decision as JSON with exit 0, the form it
+# honored in the same measurement. A hook that already printed a decision keeps its stdout; a
+# reason given only on stderr becomes the decision's reason.
+if ($code -eq 2) {
+    $utf8 = New-Object System.Text.UTF8Encoding($false)
+    $hookEvent = ''
+    if ($utf8.GetString($payload) -match '"hook_event_name"\s*:\s*"([^"]+)"') { $hookEvent = $Matches[1] }
+    if (@('PreToolUse', 'PostToolUse', 'UserPromptSubmit', 'Stop') -contains $hookEvent) {
+        $decided = $false
+        try {
+            $j = $utf8.GetString($outBytes) | ConvertFrom-Json
+            $decided = ($j.decision -eq 'block') -or ($j.hookSpecificOutput.permissionDecision -eq 'deny')
+        } catch { }
+        if (-not $decided) {
+            $reason = $utf8.GetString($errBytes).Trim()
+            if (-not $reason) { $reason = $utf8.GetString($outBytes).Trim() }
+            if (-not $reason) { $reason = "claude-harness-toolkit: $Hook blocked this" }
+            $outBytes = $utf8.GetBytes(([ordered]@{ decision = 'block'; reason = $reason } | ConvertTo-Json -Compress))
+        }
+        $code = 0
+    }
+}
+
 $stdout = [Console]::OpenStandardOutput()
-$stdout.Write($bytes, 0, $bytes.Length)
+$stdout.Write($outBytes, 0, $outBytes.Length)
 $stdout.Flush()
-$bytes = $err.ToArray()
 $stderr = [Console]::OpenStandardError()
-$stderr.Write($bytes, 0, $bytes.Length)
+$stderr.Write($errBytes, 0, $errBytes.Length)
 $stderr.Flush()
-exit $p.ExitCode
+exit $code
